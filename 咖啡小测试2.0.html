@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>B&M 感官潜型测试</title>
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 html2canvas 用于生成海报 -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            /* 奶白高阶主题配色 */
+            --bg-main: #FDFBF7; 
+            --card-bg: #FFFFFF; 
+            --gold: #C29B62; 
+            --gold-light: #F4EDDE; 
+            --text-main: #2C2825; 
+            --text-muted: #8E8881; 
+            --border-light: rgba(194, 155, 98, 0.2);
+            --shadow-soft: 0 8px 24px rgba(44, 40, 37, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body { background-color: var(--bg-main); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; background-image: linear-gradient(135deg, #FFFFFF 0%, #F5F2EB 100%); }
+
+        .app-container { width: 100%; max-width: 480px; height: 100vh; display: flex; flex-direction: column; position: relative; overflow-y: auto; overflow-x: hidden; }
+        
+        .pad-wrap { padding: 30px 24px; display: flex; flex-direction: column; height: 100%; }
+
+        .screen { display: none; flex-direction: column; height: 100%; animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .screen.active { display: flex; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 返回导航 --- */
+        .back-nav { font-size: 14px; color: var(--text-muted); cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; user-select: none; align-self: flex-start; transition: color 0.2s; }
+        .back-nav:active { color: var(--gold); }
+
+        /* --- 1. 欢迎页 --- */
+        .home-wrap { margin: auto 0; text-align: center; }
+        .brand-logo { font-size: 36px; font-weight: 800; color: var(--gold); letter-spacing: 4px; margin-bottom: 8px; font-family: "Times New Roman", serif;}
+        .brand-sub { font-size: 11px; color: var(--text-muted); letter-spacing: 5px; text-transform: uppercase; margin-bottom: 50px; }
+        .hero-title { font-size: 26px; font-weight: 800; line-height: 1.5; margin-bottom: 30px; color: var(--text-main); }
+        .hero-title span { color: var(--gold); position: relative; display: inline-block; font-size: 32px; margin-top: 5px;}
+        .hero-title span::after { content: ''; position: absolute; bottom: 4px; left: 0; width: 100%; height: 10px; background: var(--gold-light); z-index: -1; }
+        .btn-gold { background: var(--gold); color: #FFF; border: none; padding: 18px 40px; font-size: 16px; font-weight: bold; border-radius: 30px; cursor: pointer; width: 100%; box-shadow: 0 8px 20px rgba(194, 155, 98, 0.3); transition: all 0.2s; letter-spacing: 1px; }
+        .btn-gold:active { transform: scale(0.96); background: #B38C52; }
+
+        /* --- 2. 身份选择 & 答题页 --- */
+        .role-title { font-size: 20px; font-weight: 600; margin-bottom: 30px; text-align: center; color: var(--text-main); }
+        .role-card { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow-soft); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 16px; }
+        .role-card:active { background: var(--gold-light); border-color: var(--gold); }
+        .role-icon { font-size: 30px; }
+        .role-info h3 { font-size: 16px; color: var(--text-main); margin-bottom: 6px; font-weight: 700; }
+        .role-info p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+        .progress-bar { width: 100%; height: 4px; background: #EBE5DB; border-radius: 2px; margin-bottom: 40px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: var(--gold); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .q-text { font-size: 22px; font-weight: 600; line-height: 1.5; margin-bottom: 30px; color: var(--text-main); }
+        .option { background: var(--card-bg); border: 1px solid #EBE5DB; padding: 20px; box-shadow: var(--shadow-soft); border-radius: 12px; margin-bottom: 16px; font-size: 15px; color: var(--text-main); cursor: pointer; transition: 0.2s; }
+        .option:active { border-color: var(--gold); background: var(--gold-light); }
+
+        /* --- 3. 动画加载页 --- */
+        .loading-wrap { margin: auto 0; text-align: center; width: 100%; }
+        .curve-box { width: 100%; height: 180px; margin-bottom: 20px; position: relative; border-bottom: 2px solid rgba(194, 155, 98, 0.3); border-left: 2px solid rgba(194, 155, 98, 0.3); padding-top: 10px; background: repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(194, 155, 98, 0.05) 20px); }
+        .chart-reveal { width: 100%; height: 100%; clip-path: inset(0 100% 0 0); animation: drawChart 2.5s linear forwards; }
+        @keyframes drawChart { to { clip-path: inset(0 0 0 0); } }
+        .roast-stats { display: flex; justify-content: space-between; font-family: "Courier New", monospace; font-size: 12px; color: var(--gold); margin-bottom: 20px; text-align: left; padding: 10px; background: rgba(194, 155, 98, 0.05); border-radius: 8px; border: 1px solid var(--border-light); }
+        .stat-item span { display: block; font-size: 18px; font-weight: bold; color: var(--text-main); margin-top: 4px; }
+        .load-text { font-size: 15px; color: var(--gold); letter-spacing: 2px; font-weight: bold; }
+
+        /* --- 4. 结果页 --- */
+        #capture-area { background-color: var(--bg-main); padding: 30px 24px 20px 24px; position: relative; }
+        .soul-box { text-align: center; margin-bottom: 20px; }
+        .soul-title-top { font-size: 12px; color: var(--text-muted); letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase; }
+        .soul-name { font-size: 26px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; }
+        .roast-data { display: inline-block; background: var(--gold-light); border: 1px solid var(--gold); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: var(--gold); font-weight: bold; }
+
+        .narrative-box { font-size: 14px; color: var(--text-main); line-height: 1.8; text-align: justify; margin-bottom: 30px; }
+        .radar-container { width: 100%; max-width: 320px; margin: 0 auto 30px; position: relative; }
+        
+        .advice-box { background: rgba(194, 155, 98, 0.08); border-left: 4px solid var(--gold); padding: 16px; border-radius: 0 8px 8px 0; margin-bottom: 30px; }
+        .advice-title { font-size: 14px; font-weight: bold; color: var(--text-main); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .advice-content { font-size: 13px; color: var(--text-main); line-height: 1.6; text-align: justify; white-space: pre-line; }
+
+        .science-box { border-top: 1px dashed var(--border-light); padding-top: 20px; margin-bottom: 20px; }
+        .science-title { font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 8px; }
+        .science-content { font-size: 12px; color: var(--text-muted); line-height: 1.6; text-align: justify; }
+
+        .poster-footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-light); font-weight: bold; line-height: 1.5; }
+
+        .commercial-area { padding: 0 24px 40px 24px; }
+        .real-product-box { background: linear-gradient(160deg, #FFFFFF 0%, #FAF8F5 100%); border: 1px solid var(--gold); border-radius: 16px; padding: 24px; position: relative; box-shadow: 0 10px 30px rgba(194, 155, 98, 0.15); margin-bottom: 20px; }
+        .rp-header { font-size: 12px; color: var(--gold); margin-bottom: 16px; display: flex; justify-content: space-between; font-weight: bold; }
+        .rp-name { font-size: 20px; font-weight: 800; margin-bottom: 12px; color: var(--text-main); line-height: 1.4; }
+        .rp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .rp-tag { background: #F4F1EA; border: 1px solid #E3D9C8; color: var(--text-main); font-size: 12px; padding: 4px 10px; border-radius: 6px; font-weight: 500; }
+        .cta-btn { display: block; width: 100%; background: #2C2825; color: #FFF; border: none; padding: 14px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; text-align: center; margin-top: 15px; }
+        
+        .btn-outline { display: block; width: 100%; background: transparent; color: var(--gold); border: 1px solid var(--gold); padding: 14px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; text-align: center; margin-bottom: 12px; }
+        .btn-reset { display: block; width: 100%; background: #8E8881; color: #FFF; border: none; padding: 14px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; text-align: center; margin-bottom: 20px; box-shadow: none; }
+
+        .poster-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s; }
+        .poster-modal.active { display: flex; opacity: 1; }
+        .poster-img { max-width: 90%; max-height: 75vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain; }
+        .poster-tip { color: #FFF; font-size: 15px; margin-top: 20px; font-weight: bold; letter-spacing: 1px; }
+        .close-modal { position: absolute; top: 20px; right: 20px; color: #FFF; font-size: 30px; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div id="screen-home" class="screen active pad-wrap">
+        <div class="home-wrap">
+            <div class="brand-logo">B&M COFFEE</div>
+            <div class="brand-sub">东莞市蓝山实业有限公司</div>
+            <div class="hero-title">探秘你的<br><span>「咖啡感官潜型」</span></div>
+            <button class="btn-gold" onclick="nextScreen('screen-role')">开启测算</button>
+        </div>
+    </div>
+
+    <div id="screen-role" class="screen pad-wrap">
+        <div class="back-nav" onclick="nextScreen('screen-home')">← 返回首页</div>
+        <div class="role-title">第一步：确认您的日常场景</div>
+        <div class="role-card" onclick="startQuiz('b2c')">
+            <div class="role-icon">☕️</div>
+            <div class="role-info"><h3>个人寻味发烧友</h3><p>寻找对味的日常口粮或极致探索体验。</p></div>
+        </div>
+        <div class="role-card" onclick="startQuiz('shop')">
+            <div class="role-icon">🏪</div>
+            <div class="role-info"><h3>咖啡店主 / 吧台主理</h3><p>为门店寻找高稳定性、高转化的基石豆。</p></div>
+        </div>
+        <div class="role-card" onclick="startQuiz('corp')">
+            <div class="role-icon">🏢</div>
+            <div class="role-info"><h3>企业 / 办公室采购</h3><p>全自动机适用口粮或商务接待方案。</p></div>
+        </div>
+    </div>
+
+    <div id="screen-quiz" class="screen pad-wrap">
+        <div class="back-nav" onclick="handleQuizBack()">← 返回上一页</div>
+        <div class="progress-bar"><div id="progress" class="progress-fill"></div></div>
+        <div id="q-text" class="q-text">问题</div>
+        <div id="options-box"></div>
+    </div>
+
+    <div id="screen-loading" class="screen pad-wrap">
+        <div class="loading-wrap">
+            <div class="roast-stats">
+                <div class="stat-item">豆温 (BT)<span id="anim-bt">185.2°C</span></div>
+                <div class="stat-item">环境温 (ET)<span id="anim-et">205.4°C</span></div>
+                <div class="stat-item">升温率 (RoR)<span id="anim-ror">8.4 /min</span></div>
+            </div>
+            <div class="curve-box">
+                <div class="chart-reveal">
+                    <svg viewBox="0 0 100 50" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+                        <defs><linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C29B62" stop-opacity="0.4"/><stop offset="100%" stop-color="#C29B62" stop-opacity="0"/></linearGradient></defs>
+                        <path d="M0,45 Q20,40 40,25 T100,5 L100,50 L0,50 Z" fill="url(#curveGrad)"/>
+                        <path d="M0,45 Q20,40 40,25 T100,5" fill="none" stroke="#C29B62" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="load-text">首席烘焙师正在计算感官模型...</div>
+        </div>
+    </div>
+
+    <div id="screen-result" class="screen">
+        <div id="capture-area">
+            <div class="soul-box">
+                <div class="soul-title-top">— Sensory Profile —</div>
+                <div id="res-soul-name" class="soul-name">风味探索家</div>
+                <div id="res-roast" class="roast-data">🔍 潜型解码完成</div>
+            </div>
+
+            <div id="res-narrative" class="narrative-box">叙事加载中...</div>
+
+            <div class="radar-container"><canvas id="radarChart"></canvas></div>
+
+            <div class="advice-box">
+                <div class="advice-title" id="res-advice-title">☕️ 你的专属风味秘籍</div>
+                <div id="res-advice" class="advice-content">建议加载中...</div>
+            </div>
+
+            <div class="science-box">
+                <div class="science-title">💡 首席烘焙师硬核解析</div>
+                <div id="res-science" class="science-content">科普加载中...</div>
+            </div>
+
+            <div class="poster-footer">
+                东莞市蓝山实业有限公司 · 首席烘焙师监制<br><br>
+                🔍 小红书搜索：B&M COFFEE东莞蓝山咖啡（查看更多内容）
+            </div>
+        </div>
+
+        <div class="commercial-area" id="commercial-area">
+            <button class="btn-outline" onclick="generatePoster()">📸 生成无广告感官海报</button>
+            <button class="btn-reset" onclick="resetQuiz()">🔄 重新进行测算</button>
+
+            <div class="real-product-box">
+                <div class="rp-header"><span>B&M 专属匹配商品</span><span id="res-spec">精品规格</span></div>
+                <div id="res-rp-name" class="rp-name">商品名称</div>
+                <div id="res-tags" class="rp-tags"></div>
+                <button class="cta-btn" onclick="alert('暗号已复制！请发送给客服。')">
+                    凭暗号 <span id="res-code" style="color:#C29B62;"></span> 索取独家方案
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 海报弹窗 -->
+<div class="poster-modal" id="poster-modal">
+    <div class="close-modal" onclick="closePoster()">×</div>
+    <img id="poster-img" class="poster-img" src="" alt="您的专属海报">
+    <div class="poster-tip">👆 长按图片保存到手机相册</div>
+</div>
+
+<script>
+    function nextScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // ========== 全新专业级映射数据库 (保持原始高级感调性) ==========
+    const bmProducts = [
+        // ---- 个人篇 (B2C) 手冲4大细分风味 ----
+        { 
+            tags: ['b2c', 'pour_over', 'floral'], name: '耶加雪菲（水洗）', spec: '精品单品系列', soul: '👨‍🔬 优雅花香探索者', code: '水洗耶加',
+            f_tags: ['茉莉花香', '清澈茶感', '柠檬柑橘'], radar: [4.8, 4.2, 2.5, 4.9, 4.5],
+            adviceTitle: '📋 你的专属点单与品鉴攻略',
+            narrative: '你偏爱那份不着痕迹的优雅。这杯如同茉莉花茶般清澈的水洗耶加雪菲，没有厚重的负担，只有高扬的白花香气与柑橘般明亮的酸甜。在3分钟的慢品中，它用最温柔的方式唤醒你的味蕾，这是你对纯净与精致生活的执着表白。',
+            advice: '【去咖啡店怎么点】\n进店直接锁定吧台的单品豆单，寻找标有“水洗耶加雪菲”或风味描述带有“茉莉、白花、柑橘”的豆子。推荐热饮，感受温度微降时更具层次的优雅茶感。\n\n【居家买豆指南】\n认准“浅烘焙”，居家冲煮建议使用92℃高水温与较快流速，即可轻松释放迷人花香。',
+            science: '采用传统精细水洗处理法完全剥离果肉与果胶，进行洁净发酵，使咖啡生豆完美保留了其细胞壁内极其高扬、清澈的挥发性单萜醇花香分子。'
+        },
+        { 
+            tags: ['b2c', 'pour_over', 'fruity'], name: '果丁丁（日晒）', spec: '璀璨花果系列', soul: '👨‍🔬 明亮果香玩家', code: '日晒果丁丁',
+            f_tags: ['草莓果酱', '热带水果', '多汁酸甜'], radar: [4.5, 4.7, 3.5, 4.8, 4.3],
+            adviceTitle: '📋 你的专属点单与品鉴攻略',
+            narrative: '生活需要多姿多彩的鲜活惊喜。这杯日晒果丁丁散发着浓郁的草莓与热带水果香气，像是一杯熟透的水果茶，饱满而多汁。它那明亮活泼的酸甜层次，是你打破沉闷日常、释放创意思维的灵感催化剂。',
+            advice: '【去咖啡店怎么点】\n寻找豆单上明确标有“日晒埃塞”或者“综合浆果、百香果”风味描述的产品，告诉咖啡师你想要喝一杯如果汁般甜美饱满的水果手冲豆。\n\n【居家买豆指南】\n选择中浅烘焙生豆。居家冲煮推荐90℃水温，适当减慢后段注水绕圈频率，能更好地逼出其饱满成熟的果糖甜感。',
+            science: '全果带壳慢速阳光日晒，果肉中的天然果糖与大量有机酸在长达数十日的干燥晾晒中缓慢深层渗透进胚乳，创造出极丰富的复杂水果酯类化合物。'
+        },
+        { 
+            tags: ['b2c', 'pour_over', 'honey'], name: '班其玛吉瑰夏山 瑰夏', spec: '传奇瑰夏系列', soul: '👨‍🔬 蜜处理追随者', code: '传奇瑰夏',
+            f_tags: ['蜂蜜黄糖', '温润丝滑', '极高甜感'], radar: [3.5, 4.9, 4.0, 4.7, 4.6],
+            adviceTitle: '📋 你的专属点单与品鉴攻略',
+            narrative: '你不喜欢极端的尖锐，更懂得欣赏平衡与温润的美。这杯来自瑰夏故乡的蜜处理瑰夏，退去了锋利的酸质，将蜂蜜与黄糖般的饱满甜感融入丝滑的汤体中。它内敛而高贵，每一口都是对岁月静好的温柔犒赏。',
+            advice: '【去咖啡店怎么点】\n点单时可以寻找注明为“蜜处理（Honey Process）”的高海拔瑰夏或中美洲生豆，着重体验其中段没有突兀酸味、异常温润饱满的蜂蜜回甘。\n\n【居家买豆指南】\n蜜处理工艺下的浅烘或中浅烘豆耐泡度极高。居家冲煮建议降低水温至88-90℃，稍微拉长焖蒸时间，能冲泡出极佳的粘稠厚实感。',
+            science: '蜜处理去皮后特意保留高糖分的咖啡果胶带壳干燥。在脱水期间果胶发生温和的微发酵，促使咖啡熟豆在冲煮时展现出峰值的蔗糖回甘与黏稠体脂感。'
+        },
+        { 
+            tags: ['b2c', 'pour_over', 'winey'], name: '云南普洱', spec: '国潮风味系列', soul: '👨‍🔬 红酒日晒笃信者', code: '浓郁云南',
+            f_tags: ['香醇红酒', '熟酵浆果', '黑巧余韵'], radar: [2.5, 4.6, 4.8, 4.5, 4.9],
+            adviceTitle: '📋 你的专属点单与品鉴攻略',
+            narrative: '你着迷于那些经过时间沉淀、浓烈且戏剧性的风味。这杯采用红酒日晒处理的云南普洱咖啡，带着熟成浆果与醇厚红酒般的微醺香气。入口厚实绵长，伴随着黑巧克力的悠长余韵，深邃而又令人回味无穷。',
+            advice: '【去咖啡店怎么点】\n寻找带有“厌氧日晒”或产品明确标注“中国云南·微发酵”的特色产品。推荐搭配店内的巧克力甜点一同饮用，口感宛如品尝黑巧红酒利口酒。\n\n【居家买豆指南】\n认准深度红酒厌氧处理的高品质中度烘焙豆。居家适合用粗研磨慢速滴滤，甚至法压壶浸泡，能最大化放大饱满的发酵酒香与醇厚回甘。',
+            science: '采用完全密闭容器进行深度控温厌氧发酵或微发酵红酒处理，酵母菌将苹果酸等大量转化为具有独特酒香的高级醇与乳酸，赋予其特有的成熟发酵风味。'
+        },
+
+        // ---- 个人篇 (B2C) 意式机原始2选项 ----
+        { 
+            tags: ['b2c', 'espresso', 'fruity'], name: 'SOE 单一产地精选', spec: '先锋玩家系列', soul: '👨‍🔬 先锋果酸玩家', code: '果香SOE',
+            f_tags: ['樱桃蜜桃', '黄油饼干', '红酒可可'], radar: [4.0, 4.5, 3.5, 4.5, 4.0],
+            adviceTitle: '📋 你的专属点单与品鉴攻略',
+            narrative: '有些人的生活是既定轨道，而你偏要活成旷野。你讨厌一成不变的沉闷，连每天必喝的这杯咖啡，也要藏着鲜活的惊喜。在高压萃取下爆发出明媚的樱桃与黄油饼干香气，是你在平淡日常里发起的微小“叛逆”。它无声地提醒着你：生活永远有另一种生机勃勃的解法。',
+            advice: '【去咖啡店怎么点】\n进店直接锁定『SOE』或『创意特调』菜单。点一杯“SOE Dirty”，体验第一口冷冽鲜奶与热烈果香浓缩在口腔碰撞的惊艳。\n\n【居家买豆指南】\n认准“中浅烘焙的SOE”，适合在家制作果香浓缩，搭配燕麦奶能产生高级的黄油饼干风味。',
+            science: '针对意式高压环境，烘焙师拉长了脱水期并缩短了发展时间，在规避浓缩萃取尖锐酸感的同时，精准保留了高扬的水果调性。'
+        },
+        { 
+            tags: ['b2c', 'espresso', 'nutty'], name: '意式浓香经典拼配', spec: '经典意式系列', soul: '🏠 浓郁油脂控', code: '意式浓香',
+            f_tags: ['坚果巧克力', '焦糖太妃', '丰厚油脂'], radar: [1.5, 4.5, 5.0, 3.5, 4.5],
+            adviceTitle: '📋 你的专属点单与品鉴攻略',
+            narrative: '成年人的底色往往是咬牙坚持。那些不足为外人道的压力，都需要一种坚实的力量来托底。当你萃取出那层丰厚、散发着太妃糖香气的金黄色油脂，那是你为自己穿上的“软猬甲”。这杯深邃浓郁的咖啡，咽下的是醇厚，撑起的是面对兵荒马乱时的从容与底气。',
+            advice: '【去咖啡店怎么点】\n你的主场是『意式经典菜单』。澳白（Flat White）、拿铁是你的绝对安全牌。极度需要提神时，直接对咖啡师说：“我要最浓郁扎实、带有黑巧味道的那种深烘冰美式。”\n\n【居家买豆指南】\n半自动机或摩卡壶用户认准“深烘意式拼配”。它能产出极高的油脂率，让你在家也能轻松拉花，和牛奶结合后麦香味拉满。',
+            science: '精妙的拼配技术结合深度焦糖化反应，使多糖转化为复杂的焦糖聚合物，确保在高压下释放最绵密的Crema（油脂层）。'
+        },
+
+        // ---- 门店篇 (Shop) ----
+        { 
+            tags: ['shop', 'milk_heavy'], name: '意式浓香', spec: '商业基石系列', soul: '🏪 奶咖主理人', code: '门店金标',
+            f_tags: ['极高容错', '坚果焦糖', '奶咖绝配'], radar: [1.5, 4.5, 5.0, 3.8, 4.5],
+            adviceTitle: '🏪 门店出品赋能方案',
+            narrative: '开一家店，其实是在这钢筋水泥的城市里造一座岛。你并不急于用夸张的风味去炫技，因为你深知，街坊邻居们推门而入，求的往往只是一杯“每天都一样好喝”的拿铁。这支极致稳定的醇厚拼配，是你给客人们最默契的承诺：只要这家店还在，那口熟悉的焦糖回甘，就永远在这里等你。',
+            advice: '【出品稳定性建议】无论早高峰多忙，哪怕是新手咖啡师操作，它也能保持连续出杯的高度一致性。极高的萃取宽容度，是你稳固客源、提升复购率的核心引擎。',
+            science: '深度焦糖化反应锁住坚果油脂，在各种商业机型的高频压榨下，依然能保持极高的抗干扰能力与风味稳定性。'
+        },
+        { 
+            tags: ['shop', 'black_heavy', 'nutty'], name: '意式醇香', spec: '硬核出品系列', soul: '🏪 硬核美式主理人', code: '硬核招牌',
+            f_tags: ['黑莓黑巧', '低酸高醇', '美式基石'], radar: [1.0, 4.0, 5.0, 3.5, 4.8],
+            adviceTitle: '🏪 门店出品赋能方案',
+            narrative: '吧台后站久了，你会看懂每一张疲惫面孔背后的潜台词。他们行色匆匆，需要的不是花里胡哨的故事，而是一剂能瞬间拉回理智的“还魂汤”。这支低酸高醇、像黑巧般扎实的豆子，是你递给这座城市打工人的无声慰藉。一口冰美式下肚，骨架不散，灵魂归位。',
+            advice: '【菜单适配建议】深度烘焙带来了极低的酸度与霸道的醇厚度。特调冰饮绝不水感，它是你提升冰饮客单价、锁定高频复购顾客的绝对底气。',
+            science: '深度烘焙使豆体组织疏松，萃取时水溶性物质快速释放，即使加入大量冰块稀释，依然能保持骨架不散、醇厚度不减。'
+        },
+        { 
+            tags: ['shop', 'black_heavy', 'fruity'], name: '花魁SOE 咖啡豆', spec: '单品意式系列', soul: '🏪 精品美式主理人', code: '花魁SOE',
+            f_tags: ['明亮花香', '草莓香气', '高级特调'], radar: [4.8, 4.2, 3.0, 4.8, 4.0],
+            adviceTitle: '🏪 门店出品赋能方案',
+            narrative: '懂你的人，终究会跋山涉水来找你。你把这支带着明亮花香与果汁感的豆子藏在菜单深处，就像是留给同频知己的一个接头暗号。当它化作一杯干净、清澈的美式，你们之间不需要多余的寒暄。这种在风味里遇见的默契，是主理人这条孤独旅途上最珍贵的微光。',
+            advice: '【冲煮参数建议】建议使用较高的水温与稍细的研磨度，以充分激发其高分子芳香物质。它是制作门店招牌SOE美式或高阶果咖特调的不二之选。',
+            science: '选用单一产地高海拔微批次生豆，利用慢速脱水的烘焙节奏，彻底激发咖啡果实本身的酶促花果香气，杜绝杂味干扰。'
+        },
+
+        // ---- 企业篇 (Corp) ----
+        { 
+            tags: ['corp', 'machine', 'nutty'], name: '意式浓香办公优选', spec: '企业赋能系列', soul: '🏢 高效职场管家', code: '职场浓香',
+            f_tags: ['保护刀盘', '均衡高甜', '大众挚爱'], radar: [2.0, 4.5, 4.0, 3.5, 4.0],
+            adviceTitle: '🏢 企业茶水间升级方案',
+            narrative: '格子间里的故事，大多与KPI和方案有关，但茶水间却藏着职场人最柔软的时刻。这支适配全自动机器的醇厚咖啡，不讲究复杂的冲煮，却有着最懂事的体贴。它是连续熬夜后那一丝不带酸涩的暖意，也是同事间心照不宣递来的一杯黑巧甘甜。它不说话，却陪你们打赢了一场又一场硬仗。',
+            advice: '【设备养护优势】告别频繁的机器报修与难以下咽的茶水间咖啡。这款豆子干爽不出油、不堵刀盘、出脂丰富，是行政采购提升员工满意度的最佳决策。',
+            science: '专为全自动咖啡机定制烘焙。严格控制失水率以保持豆表干爽，避免油脂提前渗出堵塞机器刀盘，同时确保在短时间内释放足够甜感。'
+        },
+        { 
+            tags: ['corp', 'machine', 'fruity'], name: '精品意式咖啡豆', spec: '企业灵感系列', soul: '🏢 职场创意先锋', code: '灵感SOE',
+            f_tags: ['激发灵感', '酸甜适口', '拒绝焦苦'], radar: [4.0, 4.0, 3.0, 4.5, 3.8],
+            adviceTitle: '🏢 企业茶水间升级方案',
+            narrative: '灵感卡壳的时候，盯着屏幕的每一秒都是煎熬。这时候，一杯带着果香的轻盈咖啡，就像是沉闷会议室里突然推开的一扇窗。酸甜活泼的风味滑过舌尖，唤醒的不仅是困倦的神经，还有那些被压抑的奇思妙想。它是你们头脑风暴时的破冰船，带团队驶向下一个灵感绿洲。',
+            advice: '【饮用场景适配】尤其适合广告、设计、互联网等年轻化团队。使用全自动咖啡机萃取美式，口感清爽如茶，不会给肠胃带来沉重负担。',
+            science: '优化了中浅烘焙排气周期，使咖啡豆在全自动咖啡机的密封料仓中也能保持极佳的新鲜度与风味活性，持久释放果香。'
+        },
+        { 
+            tags: ['corp', 'drip', 'nutty'], name: '经典黑巧精品挂耳', spec: '商务尊享系列', soul: '🏢 商务效率派', code: '黑巧挂耳',
+            f_tags: ['撕开即享', '极致便携', '醇厚黑巧'], radar: [1.5, 4.5, 4.8, 3.8, 4.5],
+            adviceTitle: '🏢 商务接待与差旅方案',
+            narrative: '在高铁站、在候机室、在无数个陌生的酒店房间里，你的行李箱总是装满责任，却很少装下自己。撕开这包挂耳，注水的片刻，是你一天中为数不多的“私人时间”。熟悉的黑巧醇厚在陌生空气中弥漫，像一个随身携带的避风港。无论走到哪里，这口踏实，都能让你瞬间找回主场。',
+            advice: '【场景应用建议】专为无器具场景打造的黄金萃取标准。它是企业伴手礼、高管出差或高端客户会议接待的完美载体，传递出最深厚、尊贵的风味诚意。',
+            science: '采用充氮保鲜技术，将包装内氧气残留控制在1%以下。配合适配挂耳流速的专属研磨度与烘焙曲线，无专业器具也能完美萃取。'
+        },
+        { 
+            tags: ['corp', 'drip', 'fruity'], name: '耶加雪菲', spec: '高端伴手礼系列', soul: '🏢 优雅商务精英', code: '耶加挂耳',
+            f_tags: ['明媚花果', '优雅从容', '茶感十足'], radar: [4.5, 4.0, 2.5, 5.0, 4.2],
+            adviceTitle: '🏢 商务接待与差旅方案',
+            narrative: '在冰冷的商业合同与利益博弈之外，人与人的连接，往往发生在一个优雅的瞬间。递出这一杯轻盈的耶加雪菲，不仅是交际，更是邀请对方在百忙之中，共享一场温和细腻的风味旅程。花香与茶感绽放的刹那，头衔都被短暂卸下，此刻只有懂得停下来欣赏生活之美的人，温馨而纯粹。',
+            advice: '【伴手礼赠送建议】其轻盈明亮的风味与高端的定位，极度适合作为企业节假日伴手礼，或是赠送给对生活品质有高要求的VIP客户，彰显贵司的不凡格调。',
+            science: '结合微粉控制技术进行超声波封口，锁住最易挥发的高分子花香物质，确保在冲泡瞬间能产生爆发式的香气体验。'
+        }
+    ];
+
+    let currentTrack = ''; 
+    let step = 0; 
+    let userTags = []; 
+    let radarChartInstance = null;
+    let loadingInterval = null;
+
+    function startQuiz(track) {
+        currentTrack = track; 
+        step = 0; 
+        userTags = [track];
+        nextScreen('screen-quiz');
+        renderQuestion();
+    }
+
+    // ========== 核心动态题目渲染逻辑 ==========
+    function renderQuestion() {
+        let qText = "";
+        let options = [];
+        
+        if (currentTrack === 'b2c') {
+            if (step === 0) {
+                qText = "平时喝咖啡，你的冲煮场景是？";
+                options = [
+                    { t: "手冲 / 浸泡，享受慢节奏的仪式感。", val: "pour_over" }, 
+                    { t: "意式机 / 摩卡壶，追求油脂与浓度。", val: "espresso" }
+                ];
+                document.getElementById('progress').style.width = '50%';
+            } else if (step === 1) {
+                document.getElementById('progress').style.width = '100%';
+                if (userTags[1] === 'pour_over') {
+                    qText = "你更偏向哪一种细腻的风味偏好？";
+                    options = [
+                        { t: "优雅花香调：干净清澈，像带茉莉花香的清爽果茶，顺滑不苦。", val: "floral" },
+                        { t: "明亮果香调：多汁活泼，像咬了一口新鲜柑橘，酸甜层次细腻。", val: "fruity" },
+                        { t: "温润蜜处理：近乎不酸，拥有蜂蜜与黄糖般饱满的甜感包裹度。", val: "honey" },
+                        { t: "红酒日晒调：浓郁发酵，散发成熟浆果与红酒般的微醺醇香余韵。", val: "winey" }
+                    ];
+                } else {
+                    qText = "你更偏向哪一种意式风味基调？";
+                    options = [
+                        { t: "明亮活泼，带有花香与水果酸甜。", val: "fruity" }, 
+                        { t: "温暖踏实，带有坚果、焦糖与黑巧醇厚。", val: "nutty" }
+                    ];
+                }
+            }
+        } else if (currentTrack === 'shop') {
+            if (step === 0) {
+                qText = "贵店吧台日常的出品结构偏向于？";
+                options = [
+                    { t: "拿铁/澳白/Dirty等奶咖占绝对大头。", val: "milk_heavy" }, 
+                    { t: "冰美式与清爽特调占比极高。", val: "black_heavy" }
+                ];
+                document.getElementById('progress').style.width = '50%';
+            } else if (step === 1) {
+                document.getElementById('progress').style.width = '100%';
+                qText = "作为主理人，你希望这支豆子的风味偏好是？";
+                options = [
+                    { t: "拒绝酸涩，追求极高的醇厚与焦糖坚果香。", val: "nutty" }, 
+                    { t: "带有明亮的花香果香，拉高特调与出品辨识度。", val: "fruity" }
+                ];
+            }
+        } else if (currentTrack === 'corp') {
+            if (step === 0) {
+                qText = "贵司目前的职场咖啡因摄入主要依靠？";
+                options = [
+                    { t: "茶水间配置了全自动 / 半自动咖啡机。", val: "machine" }, 
+                    { t: "无冲煮设备，需要撕开即享的便捷挂耳。", val: "drip" }
+                ];
+                document.getElementById('progress').style.width = '50%';
+            } else if (step === 1) {
+                document.getElementById('progress').style.width = '100%';
+                qText = "团队多数同事对咖啡口味的接受度偏好是？";
+                options = [
+                    { t: "喜欢传统的醇厚、不酸的浓郁黑巧味。", val: "nutty" }, 
+                    { t: "乐于尝试带有果茶香气、轻盈活泼的风味。", val: "fruity" }
+                ];
+            }
+        }
+        
+        document.getElementById('q-text').innerText = qText;
+        const box = document.getElementById('options-box');
+        box.innerHTML = '';
+        
+        options.forEach(opt => {
+            const div = document.createElement('div');
+            div.className = 'option'; div.innerText = opt.t;
+            div.onclick = () => {
+                userTags.push(opt.val); 
+                
+                // 店主环节特殊分支：选奶咖直接通往结果页
+                if (currentTrack === 'shop' && opt.val === 'milk_heavy') {
+                    processResult();
+                    return;
+                }
+                
+                step++;
+                if (step < 2) {
+                    renderQuestion();
+                } else {
+                    processResult();
+                }
+            };
+            box.appendChild(div);
+        });
+    }
+
+    // ========== 返回上一页导航核心处理 ==========
+    function handleQuizBack() {
+        if (step === 0) {
+            userTags = [];
+            currentTrack = '';
+            nextScreen('screen-role');
+        } else {
+            step--;
+            userTags.pop();
+            renderQuestion();
+        }
+    }
+
+    function resetQuiz() {
+        currentTrack = '';
+        step = 0;
+        userTags = [];
+        if (radarChartInstance) radarChartInstance.destroy();
+        nextScreen('screen-home');
+    }
+
+    // ========== 匹配算法与结果呈现 ==========
+    function processResult() {
+        nextScreen('screen-loading');
+        
+        const chartReveal = document.querySelector('.chart-reveal');
+        chartReveal.style.animation = 'none'; chartReveal.offsetHeight; chartReveal.style.animation = null; 
+
+        let bt = 185.2, et = 205.4, ror = 8.4;
+        loadingInterval = setInterval(() => {
+            bt += Math.random() * 0.8;
+            et += Math.random() * 0.4;
+            ror = ror > 2.0 ? ror - Math.random() * 0.5 : 2.0;
+            document.getElementById('anim-bt').innerText = bt.toFixed(1) + '°C';
+            document.getElementById('anim-et').innerText = et.toFixed(1) + '°C';
+            document.getElementById('anim-ror').innerText = '+' + ror.toFixed(1) + ' /min';
+        }, 150);
+
+        // 高动态模糊匹配机制
+        let bestMatch = bmProducts[0]; 
+        let maxScore = -1;
+        bmProducts.forEach(product => {
+            let score = 0;
+            userTags.forEach(tag => { if (product.tags.includes(tag)) score++; });
+            if (score > maxScore) { maxScore = score; bestMatch = product; }
+        });
+
+        setTimeout(() => {
+            clearInterval(loadingInterval);
+
+            document.getElementById('res-soul-name').innerText = bestMatch.soul;
+            document.getElementById('res-narrative').innerText = bestMatch.narrative;
+            
+            document.getElementById('res-advice-title').innerText = bestMatch.adviceTitle;
+            document.getElementById('res-advice').innerText = bestMatch.advice;
+            document.getElementById('res-science').innerText = bestMatch.science;
+            
+            document.getElementById('res-spec').innerText = bestMatch.spec;
+            document.getElementById('res-rp-name').innerText = bestMatch.name;
+            
+            const tagBox = document.getElementById('res-tags');
+            tagBox.innerHTML = '';
+            bestMatch.f_tags.forEach(t => {
+                const sp = document.createElement('span'); sp.className = 'rp-tag'; sp.innerText = t;
+                tagBox.appendChild(sp);
+            });
+            document.getElementById('res-code').innerText = `【${bestMatch.code}】`;
+            
+            renderRadarChart(bestMatch.radar);
+            nextScreen('screen-result');
+        }, 2500);
+    }
+
+    function renderRadarChart(dataPoints) {
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        if (radarChartInstance) radarChartInstance.destroy();
+        
+        radarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['酸度', '甜感', '醇厚', '香气', '余韵'],
+                datasets: [{
+                    data: dataPoints,
+                    backgroundColor: 'rgba(194, 155, 98, 0.15)',
+                    borderColor: '#C29B62', pointBackgroundColor: '#C29B62', pointBorderColor: '#FFF',
+                    borderWidth: 2, pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                scales: { r: { min: 0, max: 5, ticks: { display: false }, grid: { color: 'rgba(194, 155, 98, 0.2)' }, angleLines: { color: 'rgba(194, 155, 98, 0.2)' }, pointLabels: { color: '#8E8881', font: { size: 12, weight: 'bold' } } } },
+                plugins: { legend: { display: false } },
+                animation: { duration: 0 }
+            }
+        });
+    }
+
+    function generatePoster() {
+        const commercialArea = document.getElementById('commercial-area');
+        commercialArea.style.display = 'none';
+        
+        const captureTarget = document.getElementById('capture-area');
+        
+        html2canvas(captureTarget, {
+            backgroundColor: '#FDFBF7',
+            scale: window.devicePixelRatio || 2,
+            useCORS: true
+        }).then(canvas => {
+            commercialArea.style.display = 'block';
+            const imgData = canvas.toDataURL("image/png");
+            document.getElementById('poster-img').src = imgData;
+            document.getElementById('poster-modal').classList.add('active');
+        });
+    }
+
+    function closePoster() {
+        document.getElementById('poster-modal').classList.remove('active');
+    }
+</script>
+</body>
+</html>
